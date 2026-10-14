@@ -1,0 +1,2 @@
+Para comenzar con la ejecucion del archivo, debe ingresar el usuario y la contraseña de la persona.
+Debe ejecutar ambos archivos a la vez, con el "plataforma.h" dentro de la carpeta.
