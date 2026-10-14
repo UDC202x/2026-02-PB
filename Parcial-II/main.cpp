@@ -1,14 +1,17 @@
 // =====================================================================
 //  main.cpp -- PLANTILLA. Unico lugar donde se usa cin/cout.
 //  Protocolo de entrada/salida: ver anexo_enunciado.md
-//    1) Pedir correo y contrasena (cin >> ...). Si iniciarSesion falla -> imprimir
+//    1) Pedir correo y contrasena (cin >> ...). Si iniciarSesion falla ->
+//    imprimir
 //       "Usuario invalido" y terminar.
 //    2) Menu en ciclo hasta elegir 0:
-//       1 Listar productos (stock < 15)      4 Adicionar producto al carrito (pide id)
-//       2 Comentarios desde una fecha (pide fecha dd/mm/yyyy)   5 Listar productos del carrito
-//       3 Listar usuarios                    0 Salir
+//       1 Listar productos (stock < 15)      4 Adicionar producto al carrito
+//       (pide id) 2 Comentarios desde una fecha (pide fecha dd/mm/yyyy)   5
+//       Listar productos del carrito 3 Listar usuarios                    0
+//       Salir
 // =====================================================================
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -17,12 +20,127 @@
 using namespace std;
 
 int main() {
-    vector<Usuario> usuarios = cargarUsuarios();
-    vector<Producto> productos = cargarProductos();
-    vector<Comentario> comentarios = cargarComentarios();
-    vector<CarritoDeCompras> carritos;
+  vector<Usuario> usuarios = cargarUsuarios();
+  vector<Producto> productos = cargarProductos();
+  vector<Comentario> comentarios = cargarComentarios();
+  vector<CarritoDeCompras> carritos;
 
-    // TODO: login y menu
-    (void)usuarios; (void)productos; (void)comentarios; (void)carritos;
+  string correo, contrasena;
+  if (!(cin >> correo >> contrasena)) {
+    cout << "Usuario invalido" << endl;
     return 0;
+  }
+
+  Usuario usuarioActual{};
+  if (!iniciarSesion(usuarios, correo, contrasena, usuarioActual)) {
+    cout << "Usuario invalido" << endl;
+    return 0;
+  }
+
+  int opcion = -1;
+  int fallos = 0;
+  while (true) {
+    cout << "\n--- Menu Plataforma ---\n"
+         << "1. Listar productos con stock menor que 15\n"
+         << "2. Comentarios desde una fecha\n"
+         << "3. Listar usuarios\n"
+         << "4. Adicionar productos al carrito\n"
+         << "5. Listar productos del carrito\n"
+         << "0. Salir\n"
+         << "Ingrese una opcion: ";
+
+    if (!(cin >> opcion)) {
+      if (cin.eof()) {
+        break;
+      }
+      fallos++;
+      if (fallos > 5) {
+        break;
+      }
+      cin.clear();
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+      continue;
+    }
+    fallos = 0;
+
+    if (opcion == 0) {
+      break;
+    } else if (opcion == 1) {
+      vector<Producto> bajos = productosBajoStock(productos);
+      for (const auto &p : bajos) {
+        cout << p.idProducto << " | " << p.nombre << " | $" << p.precio
+             << " | Stock: " << p.stock << "\n";
+      }
+    } else if (opcion == 2) {
+      string fecha;
+      if (!(cin >> fecha)) {
+        if (cin.eof()) {
+          break;
+        }
+        fallos++;
+        if (fallos > 5) {
+          break;
+        }
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        continue;
+      }
+      fallos = 0;
+      vector<Comentario> filtrados = comentariosDesde(comentarios, fecha);
+      for (const auto &c : filtrados) {
+        cout << c.idComentario << " | " << c.fecha << " | " << c.producto
+             << " | " << c.usuario << " | " << c.comentario << "\n";
+      }
+    } else if (opcion == 3) {
+      vector<string> lista = listarUsuariosFormateados(usuarios);
+      for (const auto &linea : lista) {
+        cout << linea << "\n";
+      }
+    } else if (opcion == 4) {
+      int idProd = 0;
+      if (!(cin >> idProd)) {
+        if (cin.eof()) {
+          break;
+        }
+        fallos++;
+        if (fallos > 5) {
+          break;
+        }
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        continue;
+      }
+      fallos = 0;
+      ResultadoCarrito res =
+          agregarAlCarrito(carritos, productos, usuarioActual, idProd);
+      if (res == CARRITO_OK) {
+        cout << "Producto agregado al carrito.\n";
+      } else if (res == CARRITO_PRODUCTO_INVALIDO) {
+        cout << "Producto invalido.\n";
+      } else if (res == CARRITO_SIN_STOCK) {
+        cout << "Producto sin stock.\n";
+      }
+    } else if (opcion == 5) {
+      int idCarritoUsuario = -1;
+      double subtotal = 0.0;
+      double impuestos = 0.0;
+      for (const auto &c : carritos) {
+        if (c.usuario.idUsuario == usuarioActual.idUsuario) {
+          idCarritoUsuario = c.idCarrito;
+          subtotal = c.subtotal;
+          impuestos = c.impuestos;
+          break;
+        }
+      }
+      vector<Producto> items =
+          listarProductosCarrito(carritos, idCarritoUsuario);
+      for (const auto &p : items) {
+        cout << p.idProducto << " | " << p.nombre << " | $" << p.precio << "\n";
+      }
+      cout << "Subtotal: " << subtotal << "\n";
+      cout << "Impuestos: " << impuestos << "\n";
+    }
+  }
+
+  return 0;
 }
